@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  fe:
+    image: apache/doris:2.0.0_alpha-fe-x86_64
+    container_name: fe1
+    hostname: fe1
+    restart: on-failure
+    ports:
+      - "8030:8030"   # FE HTTP web UI
+      - "9020:9020"   # FE MySQL protocol
+      - "7070:7070"   # FE edit-log RPC
+    volumes:
+      - /data/apache-doris/fe/doris-meta/:/opt/apache-doris/fe/doris-meta
+      - /data/apache-doris/fe/log/:/opt/apache-doris/fe/log
+    environment:
+      - FE_SERVERS=fe1:172.20.80.1:9010
+      - FE_ID=1
+    networks:
+      doris_net:
+        ipv4_address: 172.20.80.1
+
+  be:
+    image: apache/doris:2.0.0_alpha-be-x86_64
+    container_name: be1
+    hostname: be1
+    restart: on-failure
+    depends_on:
+      - fe
+    ports:
+      - "9050:9050"   # BE heartbeat
+      - "9060:9060"   # BE storage
+    volumes:
+      - /data/apache-doris/be/storage/:/opt/apache-doris/be/storage
+      - /data/apache-doris/be/log/:/opt/apache-doris/be/log
+    environment:
+      - FE_SERVERS=fe1:172.20.80.1:9010
+      - BE_ADDR=172.20.80.2:9050
+    networks:
+      doris_net:
+        ipv4_address: 172.20.80.2
+
+networks:
+  doris_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.80.0/24
+
